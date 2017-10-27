@@ -37,11 +37,11 @@
     [terminal.parser addParsedTokensToVector:&vector];
     int n = CVectorCount(&vector);
     for (int i = 0; i < n; i++) {
-        VT100Token *token = CVectorGetObject(&vector, i);
+        VT100Token *token = CVectorGet(&vector, i);
         [terminal executeToken:token];
-        NSString *string = token.isStringType ? token.string : nil;
+        NSString *string = VT100Token_isStringType(token) ? token->string : nil;
         if (!string && token->type == VT100_ASCIISTRING) {
-            string = [token stringForAsciiData];
+            string = VT100Token_stringForAsciiData(token);
         }
         
         if (string) {
@@ -58,14 +58,14 @@
                                 NULL,
                                 NO,
                                 unicodeVersion);
-            if ([token isAscii] && [terminal charset]) {
+            if (VT100Token_isAscii(token) && [terminal charset]) {
                 ConvertCharsToGraphicsCharset(screenChars, len);
             }
             [result appendBytes:screenChars
                          length:sizeof(screen_char_t) * len];
             free(screenChars);
         }
-        [token recycleObject];
+        VT100Token_free(token);
     }
     CVectorDestroy(&vector);
 

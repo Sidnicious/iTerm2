@@ -8,6 +8,7 @@
 
 #import "VT100DCSParser.h"
 #import "VT100Parser.h"
+#import "VT100Token.h
 
 #import <Cocoa/Cocoa.h>
 #import <XCTest/XCTest.h>
@@ -44,7 +45,7 @@
     va_end(args);
 
     NSData *data = [string dataUsingEncoding:NSUTF8StringEncoding];
-    VT100Token *token = [[[VT100Token alloc] init] autorelease];
+    VT100Token *token = VT100Token_alloc();
     _context = iTermParserContextMake((unsigned char *)data.bytes, data.length);
     [_parser decodeFromContext:&_context
                          token:token
@@ -290,7 +291,7 @@
 
     token = [self tokenForDataWithFormat:@"def\r\n"];
     XCTAssert(token->type == TMUX_LINE);
-    XCTAssertEqualObjects(token.string, @"abcdef");
+    XCTAssertEqualObjects(token->string, @"abcdef");
     XCTAssert(_parser.isHooked);
     XCTAssert(_context.datalen == 0);
     [_savedState removeAllObjects];
@@ -300,26 +301,26 @@
     NSString *s = [NSString stringWithFormat:@"%c[1m", VT100CC_ESC];
     token = [self tokenForDataWithFormat:@"%@\n", s];
     XCTAssert(token->type == TMUX_LINE);
-    XCTAssertEqualObjects(token.string, s);
+    XCTAssertEqualObjects(token->string, s);
 
     // Test an empty line.
     s = @"";
     token = [self tokenForDataWithFormat:@"%@\n", s];
     XCTAssert(token->type == TMUX_LINE);
-    XCTAssertEqualObjects(token.string, s);
+    XCTAssertEqualObjects(token->string, s);
 
     // Test an empty line with CR's
     s = @"\r\r\r";
     token = [self tokenForDataWithFormat:@"%@\n", s];
     XCTAssert(token->type == TMUX_LINE);
-    XCTAssertEqualObjects(token.string, @"");
+    XCTAssertEqualObjects(token->string, @"");
 
     // Test an empty line split in two.
     token = [self tokenForDataWithFormat:@"\r"];
     XCTAssert(token->type == VT100_WAIT);
     token = [self tokenForDataWithFormat:@"\n", s];
     XCTAssert(token->type == TMUX_LINE);
-    XCTAssertEqualObjects(token.string, @"");
+    XCTAssertEqualObjects(token->string, @"");
 
     token = [self tokenForDataWithFormat:@"%%exit\r\n"];
     XCTAssert(token->type == TMUX_EXIT);
@@ -338,7 +339,7 @@
                             VT100CC_ESC, VT100CC_ESC, VT100CC_ESC, VT100CC_ESC];
     XCTAssert(token->type == DCS_TMUX_CODE_WRAP);
     NSString *expected = [NSString stringWithFormat:@"%c[1m", VT100CC_ESC];
-    XCTAssertEqualObjects(token.string, expected);
+    XCTAssertEqualObjects(token->string, expected);
 }
 
 - (void)testDCSSavedState {

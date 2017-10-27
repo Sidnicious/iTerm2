@@ -2385,17 +2385,17 @@ ITERM_WEAKLY_REFERENCEABLE
         // Session was closed or is not accepting new tokens because it's in copy mode. These can
         // be handled later (unclose or exit copy mode), so queu them up.
         for (int i = 0; i < n; i++) {
-            [_queuedTokens addObject:CVectorGetObject(vector, i)];
+            [_queuedTokens addObject:[NSValue valueWithPointer:CVectorGetObject(vector, i)]];
         }
         CVectorDestroy(vector);
         return;
     } else if (_queuedTokens.count) {
         // A closed session was just un-closed. Execute queued up tokens.
-        for (VT100Token *token in _queuedTokens) {
+        for (NSValue *token in _queuedTokens) {
             if (![self shouldExecuteToken]) {
                 break;
             }
-            [_terminal executeToken:token];
+            [_terminal executeToken:(VT100Token*)token.pointerValue];
         }
         [_queuedTokens removeAllObjects];
     }
@@ -2405,7 +2405,7 @@ ITERM_WEAKLY_REFERENCEABLE
             break;
         }
 
-        VT100Token *token = CVectorGetObject(vector, i);
+        VT100Token *token = CVectorGet(vector, i);
         DLog(@"Execute token %@ cursor=(%d, %d)", token, _screen.cursorX - 1, _screen.cursorY - 1);
         [_terminal executeToken:token];
     }
@@ -2417,8 +2417,8 @@ ITERM_WEAKLY_REFERENCEABLE
     CVector temp = *vector;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
         for (int i = 0; i < n; i++) {
-            VT100Token *token = CVectorGetObject(&temp, i);
-            [token recycleObject];
+            VT100Token *token = CVectorGet(&temp, i);
+            VT100Token_free(token);
         }
         CVectorDestroy(&temp);
     })

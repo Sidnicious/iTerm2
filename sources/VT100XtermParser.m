@@ -224,10 +224,10 @@ typedef enum {
 + (void)emitIncidentalForSetKvpHeaderInVector:(CVector *)vector
                                          data:(NSData *)data
                                      encoding:(NSStringEncoding)encoding {
-    VT100Token *headerToken = [VT100Token token];
+    VT100Token *headerToken = VT100Token_alloc();
     headerToken->type = XTERMCC_MULTITOKEN_HEADER_SET_KVP;
-    headerToken.string = [[[NSString alloc] initWithData:data
-                                                encoding:encoding] autorelease];
+    headerToken->string = [[NSString alloc] initWithData:data
+                                                encoding:encoding];
     [self parseKeyValuePairInToken:headerToken];
     CVectorAppend(vector, headerToken);
 }
@@ -235,10 +235,10 @@ typedef enum {
 + (void)emitIncidentalForMultitokenBodyInVector:(CVector *)vector
                                            data:(NSData *)data
                                        encoding:(NSStringEncoding)encoding {
-    VT100Token *token = [VT100Token token];
+    VT100Token *token = VT100Token_alloc();
     token->type = XTERMCC_MULTITOKEN_BODY;
-    token.string = [[[NSString alloc] initWithData:data
-                                          encoding:encoding] autorelease];
+    token->string = [[NSString alloc] initWithData:data
+                                          encoding:encoding];
     CVectorAppend(vector, token);
 }
 
@@ -326,8 +326,8 @@ typedef enum {
                     }
                     result->type = XTERMCC_MULTITOKEN_END;
                 } else {
-                    result.string = [[[NSString alloc] initWithData:data
-                                                           encoding:encoding] autorelease];
+                    result->string = [[NSString alloc] initWithData:data
+                                                           encoding:encoding];
                     result->type = [self tokenTypeForMode:mode];
                     if (result->type == XTERMCC_SET_KVP) {
                         [self parseKeyValuePairInToken:result];
@@ -359,7 +359,7 @@ typedef enum {
     // argument is of the form key=value
     // key: Sequence of characters not = or ^G
     // value: Sequence of characters not ^G
-    NSString* argument = token.string;
+    NSString* argument = token->string;
     NSRange eqRange = [argument rangeOfString:@"="];
     NSString* key;
     NSString* value;
@@ -371,8 +371,8 @@ typedef enum {
         value = @"";
     }
 
-    token.kvpKey = key;
-    token.kvpValue = value;
+    token->kvpKey = [key retain];
+    token->kvpValue = [value retain];
 }
 
 @end

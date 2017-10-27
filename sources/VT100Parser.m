@@ -53,8 +53,7 @@
     unsigned char *datap;
     int datalen;
 
-    VT100Token *token = [VT100Token token];
-    token.string = nil;
+    VT100Token *token = VT100Token_alloc();
     // get our current position in the stream
     datap = _stream + _streamOffset;
     datalen = _currentStreamLength - _streamOffset;
@@ -94,9 +93,9 @@
             // Some tokens have synchronous side-effects.
             switch (token->type) {
                 case XTERMCC_SET_KVP:
-                    if ([token.kvpKey isEqualToString:@"CopyToClipboard"]) {
+                    if ([token->kvpKey isEqualToString:@"CopyToClipboard"]) {
                         _saveData = YES;
-                    } else if ([token.kvpKey isEqualToString:@"EndCopy"]) {
+                    } else if ([token->kvpKey isEqualToString:@"EndCopy"]) {
                         _saveData = NO;
                     }
                     break;
@@ -104,7 +103,7 @@
                 case DCS_TMUX_CODE_WRAP: {
                     VT100Parser *tempParser = [[[VT100Parser alloc] init] autorelease];
                     tempParser.encoding = self.encoding;
-                    NSData *data = [token.string dataUsingEncoding:self.encoding];
+                    NSData *data = [token->string dataUsingEncoding:self.encoding];
                     [tempParser putStreamData:data.bytes length:data.length];
                     [tempParser addParsedTokensToVector:vector];
                     break;
@@ -153,10 +152,10 @@
     token->savingData = _saveData;
     if (token->type != VT100_WAIT && token->type != VT100CC_NULL) {
         if (_saveData) {
-            token.savedData = [NSData dataWithBytes:position length:length];
+            token->savedData = [[NSData dataWithBytes:position length:length] retain];
         }
         if (token->type == VT100_ASCIISTRING) {
-            [token setAsciiBytes:(char *)position length:length];
+            VT100Token_setAsciiBytes(token, (char*)position, length);
         }
         
         if (gDebugLogging) {
@@ -189,7 +188,7 @@
         return YES;
     }
 
-    [token recycleObject];
+    VT100Token_free(token);
     return NO;
 }
 

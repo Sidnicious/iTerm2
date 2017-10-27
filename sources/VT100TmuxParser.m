@@ -76,7 +76,7 @@
 
 // Return YES if we should unhook.
 - (BOOL)processLineIntoToken:(VT100Token *)result {
-    result.savedData = [[_line copy] autorelease];
+    result->savedData = [_line copy];
     NSString *command =
         [[[NSString alloc] initWithData:_line encoding:NSUTF8StringEncoding] autorelease];
 
@@ -95,9 +95,10 @@
         // the first thing we'll get back from the server that we do expect to see is a
         // response, so we don't want to ignore that.
         _recoveryMode = NO;
-        if (![command hasPrefix:@"%begin"] && ![result.string hasPrefix:@"%exit"]) {
+        if (![command hasPrefix:@"%begin"] && ![result->string hasPrefix:@"%exit"]) {
             result->type = VT100_WAIT;
-            result.string = nil;
+            [result->string release];
+            result->string = nil;
             return NO;
         }
     }
@@ -139,7 +140,7 @@
             unhook = YES;
         }
     }
-    result.string = command;
+    result->string = [command retain];
 
     return unhook;
 }

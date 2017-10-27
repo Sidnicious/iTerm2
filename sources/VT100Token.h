@@ -1,5 +1,4 @@
 #import <Foundation/Foundation.h>
-#import "iTermObjectPool.h"
 #import "iTermParser.h"
 #import "ScreenChar.h"
 
@@ -201,8 +200,7 @@ typedef struct {
     ScreenChars *screenChars;
 } AsciiData;
 
-@interface VT100Token : iTermPooledObject {
-@public
+typedef struct VT100Token {
     VT100TerminalTokenType type;
 
     // data is populated because the current mode uses the raw input. data is
@@ -210,37 +208,62 @@ typedef struct {
     BOOL savingData;
 
     unsigned char code;  // For VT100_UNKNOWNCHAR and VT100CSI_SCS0...SCS3.
+    
+    NSString *string, *kvpKey, *kvpValue;
+
+    AsciiData asciiData;
+    ScreenChars screenChars;
+
+    NSData* savedData;
+
+    CSIParam* _csi;
+} VT100Token;
+
+static inline VT100Token* VT100Token_alloc() {
+    return calloc(sizeof(VT100Token), 1);
 }
 
-// For VT100_STRING
-@property(nonatomic, retain) NSString *string;
+static inline VT100Token* VT100Token_allocForControlCharacter(unsigned char controlCharacter) {
+    VT100Token* token = VT100Token_alloc();
+    token->type = controlCharacter;
+    return token;
+}
 
-// For saved data (when copying to clipboard)
-@property(nonatomic, retain) NSData *savedData;
+static inline void VT100Token_free(VT100Token* token) {
+    [token->string release];
+    [token->kvpKey release];
+    [token->kvpValue release];
+    [token->savedData release];
+    free(token->_csi);
+    if (token->asciiData.buffer != token->asciiData.staticBuffer) {
+        free(token->asciiData.buffer);
+    }
+    if (token->asciiData.screenChars &&
+        token->asciiData.screenChars->buffer != token->asciiData.screenChars->staticBuffer) {
+        free(token->asciiData.screenChars->buffer);
+    }
+    free(token);
+}
 
-// For XTERMCC_SET_KVP.
-@property(nonatomic, retain) NSString *kvpKey;
-@property(nonatomic, retain) NSString *kvpValue;
+static inline CSIParam* VT100Token_getCSI(VT100Token* token) {
+    if (!token->_csi) {
+        token->_csi = calloc(sizeof(CSIParam), 1);
+    }
+    return token->_csi;
+}
 
-// For VT100CSI_ codes that take paramters.
-@property(nonatomic, readonly) CSIParam *csi;
+static inline bool VT100Token_isStringType(const VT100Token* token) {
+    return (token->type == VT100_STRING || token->type == VT100_ASCIISTRING);
+}
 
-// Is this an ascii string?
-@property(nonatomic, readonly) BOOL isAscii;
+static inline NSString* VT100Token_stringForAsciiData(const VT100Token* token) {
+    return [[[NSString alloc] initWithBytes:token->asciiData.buffer
+                                     length:token->asciiData.length
+                                   encoding:NSASCIIStringEncoding] autorelease];
+}
 
-// Is this a string or ascii string?
-@property(nonatomic, readonly) BOOL isStringType;
+static inline bool VT100Token_isAscii(const VT100Token* token) {
+    return token->type == VT100_ASCIISTRING;
+}
 
-// For ascii strings (type==VT100_ASCIISTRING).
-@property(nonatomic, readonly) AsciiData *asciiData;
-
-// Warning: autoreleased VT100Token doesn't behave normally. Use -recycleObject.
-+ (instancetype)token;
-+ (instancetype)tokenForControlCharacter:(unsigned char)controlCharacter;
-
-- (void)setAsciiBytes:(char *)bytes length:(int)length;
-
-// Returns a string for |asciiData|, for convenience (this is slow).
-- (NSString *)stringForAsciiData;
-
-@end
+void VT100Token_setAsciiBytes(VT100Token* token, char *bytes, int length);

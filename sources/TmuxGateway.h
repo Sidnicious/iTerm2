@@ -18,7 +18,7 @@ extern const int kTmuxGatewayCommandShouldTolerateErrors;
 extern const int kTmuxGatewayCommandWantsData;
 
 @class TmuxController;
-@class VT100Token;
+typedef struct VT100Token VT100Token;
 
 extern NSString * const kTmuxGatewayErrorDomain;
 

@@ -61,7 +61,7 @@ static BOOL AdvanceAndEatControlChars(iTermParserContext *context,
             case VT100CC_DC1:
             case VT100CC_DC3:
             case VT100CC_DEL:
-                CVectorAppend(incidentals, [VT100Token tokenForControlCharacter:c]);
+                CVectorAppend(incidentals, VT100Token_allocForControlCharacter(c));
                 break;
 
             case VT100CC_CAN:
@@ -641,7 +641,7 @@ static void SetCSITypeAndDefaultParameters(CSIParam *param, VT100Token *result) 
 + (void)decodeFromContext:(iTermParserContext *)context
               incidentals:(CVector *)incidentals
                     token:(VT100Token *)result {
-    CSIParam *param = result.csi;
+    CSIParam *param = VT100Token_getCSI(result);
     iTermParserContext savedContext = *context;
 
     ParseCSISequence(context, param, incidentals);

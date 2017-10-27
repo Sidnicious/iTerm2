@@ -351,7 +351,7 @@ static NSRange MakeCharacterRange(unsigned char first, unsigned char lastInclusi
 
 // Retrieve the token from the state machine's user info dictionary.
 - (VT100Token *)token {
-    return _stateMachine.userInfo[kVT100DCSUserInfoToken];
+    return [(NSValue*)_stateMachine.userInfo[kVT100DCSUserInfoToken] pointerValue];
 }
 
 // Save a passthrough character. If the tmux hack weren't here, it would direct to the hook if one
@@ -395,7 +395,7 @@ static NSRange MakeCharacterRange(unsigned char first, unsigned char lastInclusi
     if (savedState[kOffset]) {
         iTermParserAdvanceMultiple(context, [savedState[kOffset] intValue]);
     }
-    _stateMachine.userInfo = @{ kVT100DCSUserInfoToken: result };
+    _stateMachine.userInfo = @{ kVT100DCSUserInfoToken: [NSValue valueWithPointer:result] };
     result->type = VT100_WAIT;
     while (result->type == VT100_WAIT && iTermParserCanAdvance(context)) {
         if (_hook && !_hookFinished) {
@@ -428,12 +428,12 @@ static NSRange MakeCharacterRange(unsigned char first, unsigned char lastInclusi
 - (void)hook {
     if ([self compactSequence] == MAKE_COMPACT_SEQUENCE(0, 0, 'p') &&
         [[self parameters] isEqual:@[ @"1000" ]]) {
-        VT100Token *token = _stateMachine.userInfo[kVT100DCSUserInfoToken];
+        VT100Token *token = [self token];
         if (token) {
             token->type = DCS_TMUX_HOOK;
             [_uniqueID autorelease];
             _uniqueID = [[[NSUUID UUID] UUIDString] copy];
-            token.string = _uniqueID;
+            token->string = [_uniqueID retain];
         }
 
         [_hook release];
@@ -506,7 +506,7 @@ static NSRange MakeCharacterRange(unsigned char first, unsigned char lastInclusi
         case MAKE_COMPACT_SEQUENCE(0, 0, 't'):
             if ([_data hasPrefix:@"tmux;"]) {
                 token->type = DCS_TMUX_CODE_WRAP;
-                token.string = [_data substringFromIndex:5];
+                token->string = [[_data substringFromIndex:5] retain];
             }
             break;
     }
@@ -525,17 +525,18 @@ static NSRange MakeCharacterRange(unsigned char first, unsigned char lastInclusi
     NSArray *hexEncodedNames =
         [semicolonDelimitedHexEncodedNames componentsSeparatedByString:@";"];
     token->type = DCS_REQUEST_TERMCAP_TERMINFO;
-    token.csi->count = 0;
+    CSIParam* csi = VT100Token_getCSI(token);
+    csi->count = 0;
     NSDictionary *nameMap = [[self class] termcapTerminfoNameDictionary];
     for (NSString *hexEncodedName in hexEncodedNames) {
         NSString *name = [NSString stringWithHexEncodedString:hexEncodedName];
         NSNumber *value = nameMap[name];
         if (value) {
-            token.csi->p[token.csi->count++] = [value intValue];
+            csi->p[csi->count++] = [value intValue];
         } else {
-            token.csi->p[token.csi->count++] = kDcsTermcapTerminfoRequestUnrecognizedName;
+            csi->p[csi->count++] = kDcsTermcapTerminfoRequestUnrecognizedName;
         }
-        if (token.csi->count == VT100CSIPARAM_MAX) {
+        if (csi->count == VT100CSIPARAM_MAX) {
             break;
         }
     }

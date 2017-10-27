@@ -414,8 +414,8 @@ error:
 }
 
 - (void)executeToken:(VT100Token *)token {
-    NSString *command = token.string;
-    NSData *data = token.savedData;
+    NSString *command = token->string;
+    NSData *data = token->savedData;
     if (_tmuxLogging) {
         [delegate_ tmuxPrintLine:command];
     }

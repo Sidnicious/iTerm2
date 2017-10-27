@@ -261,7 +261,7 @@ static void DecodeOtherBytes(unsigned char *datap,
 
 // The datap buffer must be two bytes larger than *lenPtr.
 // Returns a string or nil if the array is not well formed UTF-8.
-static NSString* SetReplacementCharInArray(unsigned char* datap, int* lenPtr, int badIndex)
+static NSString* CreateSetReplacementCharInArray(unsigned char* datap, int* lenPtr, int badIndex)
 {
     // Example: "q?x" with badIndex==1.
     // 01234
@@ -273,9 +273,9 @@ static NSString* SetReplacementCharInArray(unsigned char* datap, int* lenPtr, in
     memmove(datap + badIndex, kUtf8Replacement, 3);
     // q###x
     *lenPtr += 2;
-    return [[[NSString alloc] initWithBytes:datap
+    return [[NSString alloc] initWithBytes:datap
                                      length:*lenPtr
-                                   encoding:NSUTF8StringEncoding] autorelease];
+                                   encoding:NSUTF8StringEncoding];
 }
 
 static void DecodeASCIIBytes(unsigned char *datap,
@@ -346,13 +346,13 @@ void ParseString(unsigned char *datap,
     if (result->type == VT100_INVALID_SEQUENCE) {
         // Output only one replacement symbol, even if rmlen is higher.
         datap[0] = ONECHAR_UNKNOWN;
-        result.string = ReplacementString();
+        result->string = [ReplacementString() retain];
         result->type = VT100_STRING;
     } else if (result->type != VT100_WAIT && !isAscii) {
-        result.string = [[[NSString alloc] initWithBytes:datap
+        result->string = [[NSString alloc] initWithBytes:datap
                                                     length:*rmlen
-                                                  encoding:encoding] autorelease];
-        if (result.string == nil) {
+                                                  encoding:encoding];
+        if (result->string == nil) {
             // Invalid bytes, can't encode.
             int i;
             if (encoding == NSUTF8StringEncoding) {
@@ -360,16 +360,16 @@ void ParseString(unsigned char *datap,
                 memcpy(temp, datap, *rmlen);
                 int length = *rmlen;
                 // Replace every byte with unicode replacement char <?>.
-                for (i = *rmlen - 1; i >= 0 && !result.string; i--) {
-                    result.string = SetReplacementCharInArray(temp, &length, i);
+                for (i = *rmlen - 1; i >= 0 && !result->string; i--) {
+                    result->string = CreateSetReplacementCharInArray(temp, &length, i);
                 }
             } else {
                 // Replace every byte with ?, the replacement char for non-unicode encodings.
-                for (i = *rmlen - 1; i >= 0 && !result.string; i--) {
+                for (i = *rmlen - 1; i >= 0 && !result->string; i--) {
                     datap[i] = ONECHAR_UNKNOWN;
-                    result.string = [[[NSString alloc] initWithBytes:datap
+                    result->string = [[NSString alloc] initWithBytes:datap
                                                                  length:*rmlen
-                                                               encoding:encoding] autorelease];
+                                                               encoding:encoding];
                 }
             }
         }

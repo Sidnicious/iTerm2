@@ -479,8 +479,9 @@ static const int kMaxScreenRows = 4096;
            token->type == VT100CSI_DECRST);
     BOOL mode = (token->type == VT100CSI_DECSET);
 
-    for (int i = 0; i < token.csi->count; i++) {
-        switch (token.csi->p[i]) {
+    CSIParam* csi = VT100Token_getCSI(token);
+    for (int i = 0; i < csi->count; i++) {
+        switch (csi->p[i]) {
             case 1:
                 self.cursorMode = mode;
                 break;
@@ -558,7 +559,7 @@ static const int kMaxScreenRows = 4096;
             case 1002:
             case 1003:
                 if (mode) {
-                    self.mouseMode = token.csi->p[i] - 1000;
+                    self.mouseMode = csi->p[i] - 1000;
                 } else {
                     self.mouseMode = MOUSE_REPORTING_NONE;
                 }
@@ -628,12 +629,13 @@ static const int kMaxScreenRows = 4096;
 
 - (void)executeSGR:(VT100Token *)token {
     assert(token->type == VT100CSI_SGR);
-    if (token.csi->count == 0) {
+    CSIParam* csi = VT100Token_getCSI(token);
+    if (csi->count == 0) {
         [self resetGraphicRendition];
     } else {
         int i;
-        for (i = 0; i < token.csi->count; ++i) {
-            int n = token.csi->p[i];
+        for (i = 0; i < csi->count; ++i) {
+            int n = csi->p[i];
             switch (n) {
                 case VT100CHARATTR_ALLOFF:
                     [self resetGraphicRendition];
@@ -708,69 +710,69 @@ static const int kMaxScreenRows = 4096;
                     // where N is a value between 0 and 255. See the colors described in screen_char_t
                     // in the comments for fgColorCode.
 
-                    if (token.csi->subCount[i] > 0) {
+                    if (csi->subCount[i] > 0) {
                         // Preferred syntax using colons to delimit subparameters
-                        if (token.csi->subCount[i] >= 2 && token.csi->sub[i][0] == 5) {
+                        if (csi->subCount[i] >= 2 && csi->sub[i][0] == 5) {
                             // CSI 38:5:P m
-                            graphicRendition_.fgColorCode = token.csi->sub[i][1];
+                            graphicRendition_.fgColorCode = csi->sub[i][1];
                             graphicRendition_.fgGreen = 0;
                             graphicRendition_.fgBlue = 0;
                             graphicRendition_.fgColorMode = ColorModeNormal;
-                        } else if (token.csi->subCount[i] >= 4 && token.csi->sub[i][0] == 2) {
+                        } else if (csi->subCount[i] >= 4 && csi->sub[i][0] == 2) {
                             // CSI 38:2:R:G:B m
                             // 24-bit color
-                            graphicRendition_.fgColorCode = token.csi->sub[i][1];
-                            graphicRendition_.fgGreen = token.csi->sub[i][2];
-                            graphicRendition_.fgBlue = token.csi->sub[i][3];
+                            graphicRendition_.fgColorCode = csi->sub[i][1];
+                            graphicRendition_.fgGreen = csi->sub[i][2];
+                            graphicRendition_.fgBlue = csi->sub[i][3];
                             graphicRendition_.fgColorMode = ColorMode24bit;
                         }
-                    } else if (token.csi->count - i >= 3 && token.csi->p[i + 1] == 5) {
+                    } else if (csi->count - i >= 3 && csi->p[i + 1] == 5) {
                         // CSI 38;5;P m
-                        graphicRendition_.fgColorCode = token.csi->p[i + 2];
+                        graphicRendition_.fgColorCode = csi->p[i + 2];
                         graphicRendition_.fgGreen = 0;
                         graphicRendition_.fgBlue = 0;
                         graphicRendition_.fgColorMode = ColorModeNormal;
                         i += 2;
-                    } else if (token.csi->count - i >= 5 && token.csi->p[i + 1] == 2) {
+                    } else if (csi->count - i >= 5 && csi->p[i + 1] == 2) {
                         // CSI 38;2;R;G;B m
                         // 24-bit color support
-                        graphicRendition_.fgColorCode = token.csi->p[i + 2];
-                        graphicRendition_.fgGreen = token.csi->p[i + 3];
-                        graphicRendition_.fgBlue = token.csi->p[i + 4];
+                        graphicRendition_.fgColorCode = csi->p[i + 2];
+                        graphicRendition_.fgGreen = csi->p[i + 3];
+                        graphicRendition_.fgBlue = csi->p[i + 4];
                         graphicRendition_.fgColorMode = ColorMode24bit;
                         i += 4;
                     }
                     break;
                 case VT100CHARATTR_BG_256:
-                    if (token.csi->subCount[i] > 0) {
+                    if (csi->subCount[i] > 0) {
                         // Preferred syntax using colons to delimit subparameters
-                        if (token.csi->subCount[i] >= 2 && token.csi->sub[i][0] == 5) {
+                        if (csi->subCount[i] >= 2 && csi->sub[i][0] == 5) {
                             // CSI 48:5:P m
-                            graphicRendition_.bgColorCode = token.csi->sub[i][1];
+                            graphicRendition_.bgColorCode = csi->sub[i][1];
                             graphicRendition_.bgGreen = 0;
                             graphicRendition_.bgBlue = 0;
                             graphicRendition_.bgColorMode = ColorModeNormal;
-                        } else if (token.csi->subCount[i] >= 4 && token.csi->sub[i][0] == 2) {
+                        } else if (csi->subCount[i] >= 4 && csi->sub[i][0] == 2) {
                             // CSI 48:2:R:G:B m
                             // 24-bit color
-                            graphicRendition_.bgColorCode = token.csi->sub[i][1];
-                            graphicRendition_.bgGreen = token.csi->sub[i][2];
-                            graphicRendition_.bgBlue = token.csi->sub[i][3];
+                            graphicRendition_.bgColorCode = csi->sub[i][1];
+                            graphicRendition_.bgGreen = csi->sub[i][2];
+                            graphicRendition_.bgBlue = csi->sub[i][3];
                             graphicRendition_.bgColorMode = ColorMode24bit;
                         }
-                    } else if (token.csi->count - i >= 3 && token.csi->p[i + 1] == 5) {
+                    } else if (csi->count - i >= 3 && csi->p[i + 1] == 5) {
                         // CSI 48;5;P m
-                        graphicRendition_.bgColorCode = token.csi->p[i + 2];
+                        graphicRendition_.bgColorCode = csi->p[i + 2];
                         graphicRendition_.bgGreen = 0;
                         graphicRendition_.bgBlue = 0;
                         graphicRendition_.bgColorMode = ColorModeNormal;
                         i += 2;
-                    } else if (token.csi->count - i >= 5 && token.csi->p[i + 1] == 2) {
+                    } else if (csi->count - i >= 5 && csi->p[i + 1] == 2) {
                         // CSI 48;2;R;G;B m
                         // 24-bit color
-                        graphicRendition_.bgColorCode = token.csi->p[i + 2];
-                        graphicRendition_.bgGreen = token.csi->p[i + 3];
-                        graphicRendition_.bgBlue = token.csi->p[i + 4];
+                        graphicRendition_.bgColorCode = csi->p[i + 2];
+                        graphicRendition_.bgGreen = csi->p[i + 3];
+                        graphicRendition_.bgBlue = csi->p[i + 4];
                         graphicRendition_.bgColorMode = ColorMode24bit;
                         i += 4;
                     }
@@ -860,7 +862,7 @@ static const int kMaxScreenRows = 4096;
 
 - (void)handleDeviceStatusReportWithToken:(VT100Token *)token withQuestion:(BOOL)withQuestion {
     if ([delegate_ terminalShouldSendReport]) {
-        switch (token.csi->p[0]) {
+        switch (VT100Token_getCSI(token)->p[0]) {
             case 3: // response from VT100 -- Malfunction -- retry
                 break;
 
@@ -896,7 +898,7 @@ static const int kMaxScreenRows = 4096;
 - (VT100GridRect)rectangleInToken:(VT100Token *)token
                   startingAtIndex:(int)index
                  defaultRectangle:(VT100GridRect)defaultRectangle {
-    CSIParam *csi = token.csi;
+    CSIParam *csi = VT100Token_getCSI(token);
     VT100GridCoord defaultMax = VT100GridRectMax(defaultRectangle);
 
     // First, construct a coord range from the passed-in parameters. They may be -1 for default
@@ -1202,7 +1204,7 @@ static const int kMaxScreenRows = 4096;
 - (void)executeToken:(VT100Token *)token {
     // Handle tmux stuff, which completely bypasses all other normal execution steps.
     if (token->type == DCS_TMUX_HOOK) {
-        [delegate_ terminalStartTmuxModeWithDCSIdentifier:token.string];
+        [delegate_ terminalStartTmuxModeWithDCSIdentifier:token->string];
         return;
     } else if (token->type == TMUX_EXIT || token->type == TMUX_LINE) {
         [delegate_ terminalHandleTmuxInput:token];
@@ -1212,10 +1214,10 @@ static const int kMaxScreenRows = 4096;
     // Handle file downloads, which come as a series of MULTITOKEN_BODY tokens.
     if (receivingFile_) {
         if (token->type == XTERMCC_MULTITOKEN_BODY) {
-            [delegate_ terminalDidReceiveBase64FileData:token.string ?: @""];
+            [delegate_ terminalDidReceiveBase64FileData:token->string ?: @""];
             return;
         } else if (token->type == VT100_ASCIISTRING) {
-            [delegate_ terminalDidReceiveBase64FileData:[token stringForAsciiData]];
+            [delegate_ terminalDidReceiveBase64FileData:VT100Token_stringForAsciiData(token)];
             return;
         } else if (token->type == XTERMCC_MULTITOKEN_END) {
             [delegate_ terminalDidFinishReceivingFile];
@@ -1227,10 +1229,10 @@ static const int kMaxScreenRows = 4096;
         }
     } else if (_copyingToPasteboard) {
         if (token->type == XTERMCC_MULTITOKEN_BODY) {
-            [delegate_ terminalDidReceiveBase64PasteboardString:token.string ?: @""];
+            [delegate_ terminalDidReceiveBase64PasteboardString:token->string ?: @""];
             return;
         } else if (token->type == VT100_ASCIISTRING) {
-            [delegate_ terminalDidReceiveBase64PasteboardString:[token stringForAsciiData]];
+            [delegate_ terminalDidReceiveBase64PasteboardString:VT100Token_stringForAsciiData(token)];
             return;
         } else if (token->type == XTERMCC_MULTITOKEN_END) {
             [delegate_ terminalDidFinishReceivingPasteboard];
@@ -1246,26 +1248,27 @@ static const int kMaxScreenRows = 4096;
         [delegate_ terminalIsAppendingToPasteboard]) {  // This is the old code that echoes to the screen. Its use is discouraged.
         // We are probably copying text to the clipboard until esc]1337;EndCopy^G is received.
         if (token->type != XTERMCC_SET_KVP ||
-            ![token.string hasPrefix:@"CopyToClipboard"]) {
+            ![token->string hasPrefix:@"CopyToClipboard"]) {
             // Append text to clipboard except for initial command that turns on copying to
             // the clipboard.
 
-            [delegate_ terminalAppendDataToPasteboard:token.savedData];
+            [delegate_ terminalAppendDataToPasteboard:token->savedData];
         }
     }
 
     // Disambiguate
     switch (token->type) {
-        case VT100CSI_DECSLRM_OR_ANSICSI_SCP:
+        case VT100CSI_DECSLRM_OR_ANSICSI_SCP: {
+            CSIParam* csi = VT100Token_getCSI(token);
             if ([delegate_ terminalUseColumnScrollRegion]) {
                 token->type = VT100CSI_DECSLRM;
-                iTermParserSetCSIParameterIfDefault(token.csi, 0, 1);
-                iTermParserSetCSIParameterIfDefault(token.csi, 1, 1);
+                iTermParserSetCSIParameterIfDefault(csi, 0, 1);
+                iTermParserSetCSIParameterIfDefault(csi, 1, 1);
             } else {
                 token->type = ANSICSI_SCP;
-                iTermParserSetCSIParameterIfDefault(token.csi, 0, 0);
+                iTermParserSetCSIParameterIfDefault(csi, 0, 0);
             }
-            break;
+        } break;
 
         default:
             break;
@@ -1275,10 +1278,10 @@ static const int kMaxScreenRows = 4096;
     switch (token->type) {
         // our special code
         case VT100_STRING:
-            [delegate_ terminalAppendString:token.string];
+            [delegate_ terminalAppendString:token->string];
             break;
         case VT100_ASCIISTRING:
-            [delegate_ terminalAppendAsciiData:token.asciiData];
+            [delegate_ terminalAppendAsciiData:&token->asciiData];
             break;
 
         case VT100_UNKNOWNCHAR:
@@ -1326,28 +1329,28 @@ static const int kMaxScreenRows = 4096;
         case VT100CSI_CPR:
             break;
         case VT100CSI_CUB:
-            [delegate_ terminalCursorLeft:token.csi->p[0] > 0 ? token.csi->p[0] : 1];
+            [delegate_ terminalCursorLeft:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1];
             break;
         case VT100CSI_CUD:
-            [delegate_ terminalCursorDown:token.csi->p[0] > 0 ? token.csi->p[0] : 1
+            [delegate_ terminalCursorDown:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1
                          andToStartOfLine:NO];
             break;
         case VT100CSI_CUF:
-            [delegate_ terminalCursorRight:token.csi->p[0] > 0 ? token.csi->p[0] : 1];
+            [delegate_ terminalCursorRight:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1];
             break;
         case VT100CSI_CUP:
-            [delegate_ terminalMoveCursorToX:token.csi->p[1] y:token.csi->p[0]];
+            [delegate_ terminalMoveCursorToX:VT100Token_getCSI(token)->p[1] y:VT100Token_getCSI(token)->p[0]];
             break;
         case VT100CSI_CUU:
-            [delegate_ terminalCursorUp:token.csi->p[0] > 0 ? token.csi->p[0] : 1
+            [delegate_ terminalCursorUp:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1
                        andToStartOfLine:NO];
             break;
         case VT100CSI_CNL:
-            [delegate_ terminalCursorDown:token.csi->p[0] > 0 ? token.csi->p[0] : 1
+            [delegate_ terminalCursorDown:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1
                          andToStartOfLine:YES];
             break;
         case VT100CSI_CPL:
-            [delegate_ terminalCursorUp:token.csi->p[0] > 0 ? token.csi->p[0] : 1
+            [delegate_ terminalCursorUp:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1
                        andToStartOfLine:YES];
             break;
         case VT100CSI_DA:
@@ -1390,17 +1393,17 @@ static const int kMaxScreenRows = 4096;
 
         case VT100CSI_DECSTBM: {
             int top;
-            if (token.csi->count == 0 || token.csi->p[0] < 0) {
+            if (VT100Token_getCSI(token)->count == 0 || VT100Token_getCSI(token)->p[0] < 0) {
                 top = 0;
             } else {
-                top = MAX(1, token.csi->p[0]) - 1;
+                top = MAX(1, VT100Token_getCSI(token)->p[0]) - 1;
             }
 
             int bottom;
-            if (token.csi->count < 2 || token.csi->p[1] <= 0) {
+            if (VT100Token_getCSI(token)->count < 2 || VT100Token_getCSI(token)->p[1] <= 0) {
                 bottom = delegate_.terminalHeight - 1;
             } else {
-                bottom = MIN(delegate_.terminalHeight, token.csi->p[1]) - 1;
+                bottom = MIN(delegate_.terminalHeight, VT100Token_getCSI(token)->p[1]) - 1;
             }
 
             [delegate_ terminalSetScrollRegionTop:top
@@ -1420,7 +1423,7 @@ static const int kMaxScreenRows = 4096;
                                                                    [delegate_ terminalHeight]);
                 // xterm incorrectly uses the second parameter for the Pid. Since I use this mostly to
                 // test xterm compatibility, it's handy to be bugwards-compatible.
-                [self sendChecksumReportWithId:token.csi->p[1]
+                [self sendChecksumReportWithId:VT100Token_getCSI(token)->p[1]
                                      rectangle:[self rectangleInToken:token
                                                       startingAtIndex:2
                                                      defaultRectangle:defaultRectangle]];
@@ -1431,7 +1434,7 @@ static const int kMaxScreenRows = 4096;
             [self handleDeviceStatusReportWithToken:token withQuestion:YES];
             break;
         case VT100CSI_ED:
-            switch (token.csi->p[0]) {
+            switch (VT100Token_getCSI(token)->p[0]) {
                 case 1:
                     [delegate_ terminalEraseInDisplayBeforeCursor:YES afterCursor:NO];
                     break;
@@ -1451,7 +1454,7 @@ static const int kMaxScreenRows = 4096;
             }
             break;
         case VT100CSI_EL:
-            switch (token.csi->p[0]) {
+            switch (VT100Token_getCSI(token)->p[0]) {
                 case 1:
                     [delegate_ terminalEraseLineBeforeCursor:YES afterCursor:NO];
                     break;
@@ -1467,7 +1470,7 @@ static const int kMaxScreenRows = 4096;
             [delegate_ terminalSetTabStopAtCursor];
             break;
         case VT100CSI_HVP:
-            [delegate_ terminalMoveCursorToX:token.csi->p[1] y:token.csi->p[0]];
+            [delegate_ terminalMoveCursorToX:VT100Token_getCSI(token)->p[1] y:VT100Token_getCSI(token)->p[0]];
             break;
         case VT100CSI_NEL:
             // We do the linefeed first because it's a no-op if the cursor is outside the left-
@@ -1493,8 +1496,8 @@ static const int kMaxScreenRows = 4096;
         case VT100CSI_RM: {
             int mode = (token->type == VT100CSI_SM);
 
-            for (int i = 0; i < token.csi->count; i++) {
-                switch (token.csi->p[i]) {
+            for (int i = 0; i < VT100Token_getCSI(token)->count; i++) {
+                switch (VT100Token_getCSI(token)->p[i]) {
                     case 4:
                         self.insertMode = mode;
                         break;
@@ -1508,7 +1511,7 @@ static const int kMaxScreenRows = 4096;
             [self softReset];
             break;
         case VT100CSI_DECSCUSR:
-            switch (token.csi->p[0]) {
+            switch (VT100Token_getCSI(token)->p[0]) {
                 case 0:
                 case 1:
                     [delegate_ terminalSetCursorBlinking:true];
@@ -1538,8 +1541,8 @@ static const int kMaxScreenRows = 4096;
             break;
 
         case VT100CSI_DECSLRM: {
-            int scrollLeft = token.csi->p[0] - 1;
-            int scrollRight = token.csi->p[1] - 1;
+            int scrollLeft = VT100Token_getCSI(token)->p[0] - 1;
+            int scrollRight = VT100Token_getCSI(token)->p[1] - 1;
             int width = [delegate_ terminalWidth];
             if (scrollLeft < 0) {
                 scrollLeft = 0;
@@ -1618,7 +1621,7 @@ static const int kMaxScreenRows = 4096;
             break;
 
         case VT100CSI_TBC:
-            switch (token.csi->p[0]) {
+            switch (VT100Token_getCSI(token)->p[0]) {
                 case 3:
                     [delegate_ terminalRemoveTabStops];
                     break;
@@ -1635,20 +1638,20 @@ static const int kMaxScreenRows = 4096;
 
             // ANSI CSI
         case ANSICSI_CBT:
-            [delegate_ terminalBackTab:token.csi->p[0]];
+            [delegate_ terminalBackTab:VT100Token_getCSI(token)->p[0]];
             break;
         case ANSICSI_CHA:
-            [delegate_ terminalSetCursorX:token.csi->p[0]];
+            [delegate_ terminalSetCursorX:VT100Token_getCSI(token)->p[0]];
             break;
         case ANSICSI_VPA:
-            [delegate_ terminalSetCursorY:token.csi->p[0]];
+            [delegate_ terminalSetCursorY:VT100Token_getCSI(token)->p[0]];
             break;
         case ANSICSI_VPR:
-            [delegate_ terminalCursorDown:token.csi->p[0] > 0 ? token.csi->p[0] : 1
+            [delegate_ terminalCursorDown:VT100Token_getCSI(token)->p[0] > 0 ? VT100Token_getCSI(token)->p[0] : 1
                          andToStartOfLine:NO];
             break;
         case ANSICSI_ECH:
-            [delegate_ terminalEraseCharactersAfterCursor:token.csi->p[0]];
+            [delegate_ terminalEraseCharactersAfterCursor:VT100Token_getCSI(token)->p[0]];
             break;
 
         case STRICT_ANSI_MODE:
@@ -1656,7 +1659,7 @@ static const int kMaxScreenRows = 4096;
             break;
 
         case ANSICSI_PRINT:
-            switch (token.csi->p[0]) {
+            switch (VT100Token_getCSI(token)->p[0]) {
                 case 4:
                     [delegate_ terminalPrintBuffer];
                     break;
@@ -1670,15 +1673,15 @@ static const int kMaxScreenRows = 4096;
 
             // XTERM extensions
         case XTERMCC_WIN_TITLE:
-            [delegate_ terminalSetWindowTitle:[token.string stringByReplacingControlCharsWithQuestionMark]];
+            [delegate_ terminalSetWindowTitle:[token->string stringByReplacingControlCharsWithQuestionMark]];
             break;
         case XTERMCC_WINICON_TITLE:
-            [delegate_ terminalSetWindowTitle:[token.string stringByReplacingControlCharsWithQuestionMark]];
-            [delegate_ terminalSetIconTitle:[token.string stringByReplacingControlCharsWithQuestionMark]];
+            [delegate_ terminalSetWindowTitle:[token->string stringByReplacingControlCharsWithQuestionMark]];
+            [delegate_ terminalSetIconTitle:[token->string stringByReplacingControlCharsWithQuestionMark]];
             break;
         case XTERMCC_PASTE64: {
-            if (token.string) {
-                NSString *decoded = [self decodedBase64PasteCommand:token.string];
+            if (token->string) {
+                NSString *decoded = [self decodedBase64PasteCommand:token->string];
                 if (decoded) {
                     [delegate_ terminalPasteString:decoded];
                 }
@@ -1689,31 +1692,31 @@ static const int kMaxScreenRows = 4096;
             [self executeFinalTermToken:token];
             break;
         case XTERMCC_ICON_TITLE:
-            [delegate_ terminalSetIconTitle:[token.string stringByReplacingControlCharsWithQuestionMark]];
+            [delegate_ terminalSetIconTitle:[token->string stringByReplacingControlCharsWithQuestionMark]];
             break;
         case VT100CSI_ICH:
-            [delegate_ terminalInsertEmptyCharsAtCursor:token.csi->p[0]];
+            [delegate_ terminalInsertEmptyCharsAtCursor:VT100Token_getCSI(token)->p[0]];
             break;
         case XTERMCC_INSLN:
-            [delegate_ terminalInsertBlankLinesAfterCursor:token.csi->p[0]];
+            [delegate_ terminalInsertBlankLinesAfterCursor:VT100Token_getCSI(token)->p[0]];
             break;
         case XTERMCC_DELCH:
-            [delegate_ terminalDeleteCharactersAtCursor:token.csi->p[0]];
+            [delegate_ terminalDeleteCharactersAtCursor:VT100Token_getCSI(token)->p[0]];
             break;
         case XTERMCC_DELLN:
-            [delegate_ terminalDeleteLinesAtCursor:token.csi->p[0]];
+            [delegate_ terminalDeleteLinesAtCursor:VT100Token_getCSI(token)->p[0]];
             break;
         case XTERMCC_WINDOWSIZE:
-            [delegate_ terminalSetRows:MIN(token.csi->p[1], kMaxScreenRows)
-                            andColumns:MIN(token.csi->p[2], kMaxScreenColumns)];
+            [delegate_ terminalSetRows:MIN(VT100Token_getCSI(token)->p[1], kMaxScreenRows)
+                            andColumns:MIN(VT100Token_getCSI(token)->p[2], kMaxScreenColumns)];
             break;
         case XTERMCC_WINDOWSIZE_PIXEL:
-            [delegate_ terminalSetPixelWidth:token.csi->p[2]
-                                      height:token.csi->p[1]];
+            [delegate_ terminalSetPixelWidth:VT100Token_getCSI(token)->p[2]
+                                      height:VT100Token_getCSI(token)->p[1]];
 
             break;
         case XTERMCC_WINDOWPOS:
-            [delegate_ terminalMoveWindowTopLeftPointTo:NSMakePoint(token.csi->p[1], token.csi->p[2])];
+            [delegate_ terminalMoveWindowTopLeftPointTo:NSMakePoint(VT100Token_getCSI(token)->p[1], VT100Token_getCSI(token)->p[2])];
             break;
         case XTERMCC_ICONIFY:
             [delegate_ terminalMiniaturize:YES];
@@ -1728,11 +1731,11 @@ static const int kMaxScreenRows = 4096;
             [delegate_ terminalRaise:NO];
             break;
         case XTERMCC_SU:
-            [delegate_ terminalScrollUp:token.csi->p[0]];
+            [delegate_ terminalScrollUp:VT100Token_getCSI(token)->p[0]];
             break;
         case XTERMCC_SD:
-            if (token.csi->count == 1) {
-                [delegate_ terminalScrollDown:token.csi->p[0]];
+            if (VT100Token_getCSI(token)->count == 1) {
+                [delegate_ terminalScrollDown:VT100Token_getCSI(token)->p[0]];
             }
             break;
         case XTERMCC_REPORT_WIN_STATE: {
@@ -1786,7 +1789,7 @@ static const int kMaxScreenRows = 4096;
             break;
         }
         case XTERMCC_PUSH_TITLE: {
-            switch (token.csi->p[1]) {
+            switch (VT100Token_getCSI(token)->p[1]) {
                 case 0:
                     [delegate_ terminalPushCurrentTitleForWindow:YES];
                     [delegate_ terminalPushCurrentTitleForWindow:NO];
@@ -1802,7 +1805,7 @@ static const int kMaxScreenRows = 4096;
             break;
         }
         case XTERMCC_POP_TITLE: {
-            switch (token.csi->p[1]) {
+            switch (VT100Token_getCSI(token)->p[1]) {
                 case 0:
                     [delegate_ terminalPopCurrentTitleForWindow:YES];
                     [delegate_ terminalPopCurrentTitleForWindow:NO];
@@ -1818,7 +1821,7 @@ static const int kMaxScreenRows = 4096;
         }
         // Our iTerm specific codes
         case ITERM_GROWL:
-            [delegate_ terminalPostGrowlNotification:token.string];
+            [delegate_ terminalPostGrowlNotification:token->string];
             break;
 
         case XTERMCC_MULTITOKEN_HEADER_SET_KVP:
@@ -1828,7 +1831,7 @@ static const int kMaxScreenRows = 4096;
 
         case XTERMCC_MULTITOKEN_BODY:
             // You'd get here if the user stops a file download before it finishes.
-            [delegate_ terminalAppendString:token.string];
+            [delegate_ terminalAppendString:token->string];
             break;
 
         case XTERMCC_MULTITOKEN_END:
@@ -1861,10 +1864,10 @@ static const int kMaxScreenRows = 4096;
             break;
 
         case VT100CSI_RESET_MODIFIERS:
-            if (token.csi->count == 0) {
+            if (VT100Token_getCSI(token)->count == 0) {
                 sendModifiers_[2] = -1;
             } else {
-                int resource = token.csi->p[0];
+                int resource = VT100Token_getCSI(token)->p[0];
                 if (resource >= 0 && resource <= NUM_MODIFIABLE_RESOURCES) {
                     sendModifiers_[resource] = -1;
                 }
@@ -1872,17 +1875,17 @@ static const int kMaxScreenRows = 4096;
             break;
 
         case VT100CSI_SET_MODIFIERS: {
-            if (token.csi->count == 0) {
+            if (VT100Token_getCSI(token)->count == 0) {
                 for (int j = 0; j < NUM_MODIFIABLE_RESOURCES; j++) {
                     sendModifiers_[j] = 0;
                 }
             } else {
-                int resource = token.csi->p[0];
+                int resource = VT100Token_getCSI(token)->p[0];
                 int value;
-                if (token.csi->count == 1) {
+                if (VT100Token_getCSI(token)->count == 1) {
                     value = 0;
                 } else {
-                    value = token.csi->p[1];
+                    value = VT100Token_getCSI(token)->p[1];
                 }
                 if (resource >= 0 && resource < NUM_MODIFIABLE_RESOURCES && value >= 0) {
                     sendModifiers_[resource] = value;
@@ -1920,10 +1923,10 @@ static const int kMaxScreenRows = 4096;
             BOOL ok = NO;
             NSMutableArray *parts = [NSMutableArray array];
             NSDictionary *inverseMap = [VT100DCSParser termcapTerminfoInverseNameDictionary];
-            for (int i = 0; i < token.csi->count; i++) {
-                NSString *stringKey = inverseMap[@(token.csi->p[i])];
+            for (int i = 0; i < VT100Token_getCSI(token)->count; i++) {
+                NSString *stringKey = inverseMap[@(VT100Token_getCSI(token)->p[i])];
                 NSString *hexEncodedKey = [stringKey hexEncodedString];
-                switch (token.csi->p[i]) {
+                switch (VT100Token_getCSI(token)->p[i]) {
                     case kDcsTermcapTerminfoRequestTerminfoName:
                         [parts addObject:[NSString stringWithFormat:kFormat,
                                           hexEncodedKey,
@@ -1943,7 +1946,7 @@ static const int kMaxScreenRows = 4096;
                         ok = YES;
                         break;
                     case kDcsTermcapTerminfoRequestUnrecognizedName:
-                        i = token.csi->count;
+                        i = VT100Token_getCSI(token)->count;
                         break;
                 }
             }
@@ -1960,7 +1963,7 @@ static const int kMaxScreenRows = 4096;
 }
 
 - (void)executeXtermSetRgb:(VT100Token *)token {
-    NSArray *parts = [token.string componentsSeparatedByString:@";"];
+    NSArray *parts = [token->string componentsSeparatedByString:@";"];
     int theIndex = 0;
     for (int i = 0; i < parts.count; i++) {
         NSString *part = parts[i];
@@ -2090,7 +2093,7 @@ static const int kMaxScreenRows = 4096;
   // argument is of the form key=value
   // key: Sequence of characters not = or ^G
   // value: Sequence of characters not ^G
-  NSString* argument = token.string;
+  NSString* argument = token->string;
   NSRange eqRange = [argument rangeOfString:@"="];
   NSString* key;
   NSString* value;
@@ -2106,17 +2109,17 @@ static const int kMaxScreenRows = 4096;
 
 - (void)executeWorkingDirectoryURL:(VT100Token *)token {
     if ([delegate_ terminalIsTrusted]) {
-        [delegate_ terminalSetWorkingDirectoryURL:token.string];
+        [delegate_ terminalSetWorkingDirectoryURL:token->string];
     }
 }
 
 - (void)executeLink:(VT100Token *)token {
-    NSInteger index = [token.string rangeOfString:@";"].location;
+    NSInteger index = [token->string rangeOfString:@";"].location;
     if (index == NSNotFound) {
         return;
     }
-    NSString *params = [token.string substringToIndex:index];
-    NSString *urlString = [token.string substringFromIndex:index + 1];
+    NSString *params = [token->string substringToIndex:index];
+    NSString *urlString = [token->string substringFromIndex:index + 1];
     if (urlString.length > 2083) {
         return;
     }
@@ -2142,7 +2145,7 @@ static const int kMaxScreenRows = 4096;
 }
 
 - (void)executeXtermSetKvp:(VT100Token *)token {
-    if (!token.string) {
+    if (!token->string) {
         return;
     }
     NSArray *kvp = [self keyValuePairInToken:token];
@@ -2311,7 +2314,7 @@ static const int kMaxScreenRows = 4096;
 
 - (void)executeXtermSetPalette:(VT100Token *)token {
     int n;
-    NSColor *theColor = [self colorForXtermCCSetPaletteString:token.string
+    NSColor *theColor = [self colorForXtermCCSetPaletteString:token->string
                                                colorNumberPtr:&n];
     if (theColor) {
         switch (n) {
@@ -2344,7 +2347,7 @@ static const int kMaxScreenRows = 4096;
 }
 
 - (void)executeXtermProprietaryExtermExtension:(VT100Token *)token {
-    NSString* argument = token.string;
+    NSString* argument = token->string;
     NSArray* parts = [argument componentsSeparatedByString:@";"];
     NSString* func = nil;
     if ([parts count] >= 1) {
@@ -2409,7 +2412,7 @@ static const int kMaxScreenRows = 4096;
 }
 
 - (void)executeFinalTermToken:(VT100Token *)token {
-    NSString *value = token.string;
+    NSString *value = token->string;
     NSArray *args = [value componentsSeparatedByString:@";"];
     if (args.count == 0) {
         return;
