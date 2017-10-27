@@ -96,7 +96,7 @@
     CVectorCreate(&vector, 1);
     [terminal.parser addParsedTokensToVector:&vector];
     for (int i = 0; i < CVectorCount(&vector); i++) {
-        [terminal executeToken:CVectorGetObject(&vector, i)];
+        [terminal executeToken:CVectorGet(&vector, i)];
     }
     CVectorDestroy(&vector);
 }

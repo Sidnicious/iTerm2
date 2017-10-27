@@ -8,7 +8,6 @@
 
 #import "VT100DCSParser.h"
 #import "VT100Parser.h"
-#import "VT100Token.h
 
 #import <Cocoa/Cocoa.h>
 #import <XCTest/XCTest.h>
@@ -372,7 +371,7 @@
     CVectorCreate(&v, 10);
     [parser addParsedTokensToVector:&v];
     XCTAssert(CVectorCount(&v) == 1);
-    VT100Token *token = CVectorGetObject(&v, 0);
+    VT100Token *token = CVectorGet(&v, 0);
     XCTAssert(token->type == VT100CSI_SGR);
 }
 

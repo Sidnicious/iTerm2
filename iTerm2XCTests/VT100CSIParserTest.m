@@ -32,7 +32,7 @@
     va_end(args);
 
     NSData *data = [string dataUsingEncoding:NSUTF8StringEncoding];
-    VT100Token *token = [[[VT100Token alloc] init] autorelease];
+    VT100Token *token = VT100Token_alloc();
     _context = iTermParserContextMake((unsigned char *)data.bytes, data.length);
     [VT100CSIParser decodeFromContext:&_context incidentals:&_incidentals token:token];
     return token;
@@ -41,26 +41,31 @@
 - (void)testCSIOnly {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[", VT100CC_ESC];
     XCTAssert(token->type == VT100_WAIT);
+    VT100Token_free(token);
 }
 
 - (void)testPrefixOnly {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[?", VT100CC_ESC];
     XCTAssert(token->type == VT100_WAIT);
+    VT100Token_free(token);
 }
 
 - (void)testPrefixParameterOnly {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[?36", VT100CC_ESC];
     XCTAssert(token->type == VT100_WAIT);
+    VT100Token_free(token);
 }
 
 - (void)testPrefixParameterIntermediateOnly {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[?36$", VT100CC_ESC];
     XCTAssert(token->type == VT100_WAIT);
+    VT100Token_free(token);
 }
 
 - (void)testFullyFormedPrefixParameterIntermediateFinal {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[?36$p", VT100CC_ESC];
     XCTAssert(token->type == VT100_NOTSUPPORT);  // Sadly, DECRQM isn't supported yet, so this test is incomplete.
+    VT100Token_free(token);
 }
 
 - (void)testSimpleCSI {
@@ -69,6 +74,7 @@
     XCTAssert(VT100Token_getCSI(token)->count == 1);
     XCTAssert(VT100Token_getCSI(token)->p[0] == 1);  // Default
     XCTAssert(VT100Token_getCSI(token)->subCount[0] == 0);
+    VT100Token_free(token);
 }
 
 - (void)testSimpleCSIWithParameter {
@@ -77,6 +83,7 @@
     XCTAssert(VT100Token_getCSI(token)->count == 1);
     XCTAssert(VT100Token_getCSI(token)->p[0] == 2);  // Parameter
     XCTAssert(VT100Token_getCSI(token)->subCount[0] == 0);
+    VT100Token_free(token);
 }
 
 - (void)testSimpleCSIWithTwoDigitParameter {
@@ -85,6 +92,7 @@
     XCTAssert(VT100Token_getCSI(token)->count == 1);
     XCTAssert(VT100Token_getCSI(token)->p[0] == 23);  // Parameter
     XCTAssert(VT100Token_getCSI(token)->subCount[0] == 0);
+    VT100Token_free(token);
 }
 
 - (void)testParameterPrefix {
@@ -93,6 +101,7 @@
     XCTAssert(VT100Token_getCSI(token)->count == 1);
     XCTAssert(VT100Token_getCSI(token)->p[0] == 23);  // Parameter
     XCTAssert(VT100Token_getCSI(token)->subCount[0] == 0);
+    VT100Token_free(token);
 }
 
 - (void)testTwoParameters {
@@ -102,6 +111,7 @@
     XCTAssert(VT100Token_getCSI(token)->p[0] == 5);
     XCTAssert(VT100Token_getCSI(token)->p[1] == 6);
     XCTAssert(VT100Token_getCSI(token)->subCount[0] == 0);
+    VT100Token_free(token);
 }
 
 - (void)testSubParameter {
@@ -117,11 +127,13 @@
     XCTAssert(VT100Token_getCSI(token)->sub[0][4] == 0);
     XCTAssert(VT100Token_getCSI(token)->sub[0][5] == 5);
     XCTAssert(VT100Token_getCSI(token)->sub[0][6] == 1);
+    VT100Token_free(token);
 }
 
 - (void)testBogusCharacterInParameters {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[38=m", VT100CC_ESC];
     XCTAssert(token->type == VT100_UNKNOWNCHAR);
+    VT100Token_free(token);
 }
 
 - (void)testIntermediateByte {
@@ -132,21 +144,25 @@
     XCTAssert(VT100Token_getCSI(token)->count == 1);
     XCTAssert(VT100Token_getCSI(token)->p[0] == 3);
     XCTAssert(VT100Token_getCSI(token)->subCount[0] == 0);
+    VT100Token_free(token);
 }
 
 - (void)testBogusCharInParameterSection {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[1<m", VT100CC_ESC];
     XCTAssert(token->type == VT100_UNKNOWNCHAR);
+    VT100Token_free(token);
 }
 
 - (void)testGarbageIgnored {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[1%cm", VT100CC_ESC, 0x7f];
     XCTAssert(token->type == VT100CSI_SGR);
+    VT100Token_free(token);
 }
 
 - (void)testBadGarbageCausesFailure {
     VT100Token *token = [self tokenForDataWithFormat:@"%c[1%c 2m", VT100CC_ESC, 0x7f];
     XCTAssert(token->type == VT100_UNKNOWNCHAR);
+    VT100Token_free(token);
 }
 
 - (void)testDefaultParameterValues {
@@ -268,6 +284,7 @@
             XCTAssert(VT100Token_getCSI(token)->p[1] == simpleCodes[i].p1);
         }
         XCTAssert(VT100Token_getCSI(token)->p[maxParams] == -1);
+        VT100Token_free(token);
     }
 }
 
@@ -312,6 +329,7 @@
     for (int i = 0; i < n; i++) {
         VT100Token *token = [self tokenForDataWithFormat:@"%c[%s", VT100CC_ESC, unsupported[i]];
         XCTAssert(token->type == VT100_NOTSUPPORT);
+        VT100Token_free(token);
     }
 }
 
@@ -348,6 +366,7 @@
         VT100Token *token = [self tokenForDataWithFormat:@"%c[%dt", VT100CC_ESC, codes[i].p0];
         XCTAssert(token->type == codes[i].type);
         XCTAssert(VT100Token_getCSI(token)->p[0] == codes[i].p0);
+        VT100Token_free(token);
     }
 }
 

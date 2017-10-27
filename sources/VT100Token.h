@@ -183,7 +183,7 @@ typedef enum {
 
 // A preinitialized array of screen_char_t. When ASCII data is present, it will have the codes
 // populated and all other fields zeroed out.
-#define kStaticScreenCharsCount 16
+#define kStaticScreenCharsCount 64
 typedef struct {
     screen_char_t *buffer;
     int length;
@@ -196,7 +196,7 @@ typedef struct {
 typedef struct {
     char *buffer;
     int length;
-    char staticBuffer[128];
+    char staticBuffer[256];
     ScreenChars *screenChars;
 } AsciiData;
 
@@ -219,9 +219,7 @@ typedef struct VT100Token {
     CSIParam* _csi;
 } VT100Token;
 
-static inline VT100Token* VT100Token_alloc() {
-    return calloc(sizeof(VT100Token), 1);
-}
+VT100Token* VT100Token_alloc(void);
 
 static inline VT100Token* VT100Token_allocForControlCharacter(unsigned char controlCharacter) {
     VT100Token* token = VT100Token_alloc();
@@ -229,21 +227,7 @@ static inline VT100Token* VT100Token_allocForControlCharacter(unsigned char cont
     return token;
 }
 
-static inline void VT100Token_free(VT100Token* token) {
-    [token->string release];
-    [token->kvpKey release];
-    [token->kvpValue release];
-    [token->savedData release];
-    free(token->_csi);
-    if (token->asciiData.buffer != token->asciiData.staticBuffer) {
-        free(token->asciiData.buffer);
-    }
-    if (token->asciiData.screenChars &&
-        token->asciiData.screenChars->buffer != token->asciiData.screenChars->staticBuffer) {
-        free(token->asciiData.screenChars->buffer);
-    }
-    free(token);
-}
+void VT100Token_free(VT100Token* token);
 
 static inline CSIParam* VT100Token_getCSI(VT100Token* token) {
     if (!token->_csi) {

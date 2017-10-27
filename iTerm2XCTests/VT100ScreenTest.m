@@ -403,7 +403,7 @@ NSLog(@"Known bug: %s should be true, but %s is.", #expressionThatShouldBeTrue, 
     CVectorCreate(&vector, 1);
     [terminal_.parser addParsedTokensToVector:&vector];
     XCTAssert(CVectorCount(&vector) == 1);
-    [terminal_ executeToken:CVectorGetObject(&vector, 0)];
+    [terminal_ executeToken:CVectorGet(&vector, 0)];
     CVectorDestroy(&vector);
 }
 
@@ -419,7 +419,7 @@ NSLog(@"Known bug: %s should be true, but %s is.", #expressionThatShouldBeTrue, 
     CVectorCreate(&vector, 1);
     [terminal_.parser addParsedTokensToVector:&vector];
     for (int i = 0; i < CVectorCount(&vector); i++) {
-        VT100Token *token = CVectorGetObject(&vector, i);
+        VT100Token *token = CVectorGet(&vector, i);
         [terminal_ executeToken:token];
     }
     CVectorDestroy(&vector);
