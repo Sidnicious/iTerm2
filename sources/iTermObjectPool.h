@@ -58,8 +58,6 @@
 
 @property(nonatomic, readonly) iTermPooledObject *pooledObject;
 
-- (instancetype)initWithClass:(Class)theClass
-                  collections:(int)numCollections
-         objectsPerCollection:(int)objectsPerCollection;
+- (instancetype)initWithClass:(Class)theClass;
 
 @end

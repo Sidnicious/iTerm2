@@ -2412,16 +2412,11 @@ ITERM_WEAKLY_REFERENCEABLE
 
     [self finishedHandlingNewOutputOfLength:length];
 
-    // When busy, we spend a lot of time performing recycleObject, so farm it
-    // off to a background thread.
-    CVector temp = *vector;
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-        for (int i = 0; i < n; i++) {
-            VT100Token *token = CVectorGetObject(&temp, i);
-            [token recycleObject];
-        }
-        CVectorDestroy(&temp);
-    })
+    for (int i = 0; i < n; i++) {
+        VT100Token *token = CVectorGetObject(vector, i);
+        [token recycleObject];
+    }
+    CVectorDestroy(vector);
     STOPWATCH_LAP(executing);
 }
 

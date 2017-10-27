@@ -22,7 +22,7 @@ static iTermObjectPool *gPool;
 }
 
 + (void)initialize {
-    gPool = [[iTermObjectPool alloc] initWithClass:self collections:20 objectsPerCollection:100];
+    gPool = [[iTermObjectPool alloc] initWithClass:self];
 }
 
 + (instancetype)token {
